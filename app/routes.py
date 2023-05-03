@@ -24,19 +24,29 @@ def validate_book(book_id):
 #CREATE ONE BOOK
 @books_bp.route("",methods =["POST"])
 def create_book():
-    request_body = request.get_json()
-    new_book = Book(
-    title=request_body["title"],
-    description=request_body["description"])
+    if request.method == "POST":
+        request_body = request.get_json()
+        if "title" not in request_body or "description" not in request_body:
+            return make_response("Invalid Request",400)
+        
+        new_book = Book(
+            title=request_body["title"],
+            description=request_body["description"])
 
-    db.session.add(new_book)
-    db.session.commit()
+        db.session.add(new_book)
+        db.session.commit()
 
-    return make_response(jsonify(f"Book {new_book.title} successfully created",201))
+        return make_response(f"Book {new_book.title} successfully created",201)
 
 #RETURN ONE BOOK
-
-
+@books_bp.route("<book_id>",methods=["GET"])
+def get_one_book(book_id):
+    book = validate_book(book_id)
+    return {
+        "id": book.id,
+        "title": book.title,
+        "description": book.description,
+    }
 
 
 
@@ -59,11 +69,8 @@ def read_all_books():
 @books_bp.route("/<book_id>",methods=["GET"])
 def read_one_book(book_id):
     book = validate_book(book_id)
-    return {
-        "id": book.id,
-        "title": book.title,
-        "description": book.description
-    }
+    
+    return book.make_dict(),200
 
 #UPDATE ONE BOOK: has a request body
 @books_bp.route("/<book_id>",methods=["PUT"])

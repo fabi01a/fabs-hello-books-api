@@ -53,9 +53,14 @@ def get_one_book(book_id):
 #RETURNS ALL THE BOOKS
 @books_bp.route("",methods=["GET"])
 def read_all_books():
-    books = Book.query.all() #query the db/get all the books/put in local var 
-    books_list = []
+    # books = Book.query.all() #query the db/get all the books/put in local var 
+    title_query = request.args.get("title")
+    if title_query:
+        books = Book.query.filter_by(title=title_query)
+    else:
+        books = Book.query.all()
     
+    books_list = []
     for book in books:
         books_list.append(dict(
             id = book.id,

@@ -1,54 +1,27 @@
 from app import db
 from app.models.book import Book
 from flask import Blueprint,jsonify, make_response,request, abort
+from routes.routes_helpers import validate_book
 
 #CREATE BP/ENDPOINT
 books_bp = Blueprint("books_bp",__name__, url_prefix="/books")
 
-#HELPER FUNCTION
-def validate_book(book_id):
-    try:
-        book_id = int(book_id)
-    except:
-        abort(make_response({"message":f"book {book_id} invalid"},400))
-    
-    book = Book.query.get(book_id)
-
-    if not book:
-        abort(make_response({"message":f"book {book_id} not found"},404))
-    
-    return book
-
-
 #ROUTE FUNCTIONS
 #CREATE ONE BOOK
-@books_bp.route("",methods =["POST"])
+@books_bp.route("", methods=["POST"])
 def create_book():
-    if request.method == "POST":
-        request_body = request.get_json()
-        if "title" not in request_body or "description" not in request_body:
-            return make_response("Invalid Request",400)
-        
-        new_book = Book(
-            title=request_body["title"],
-            description=request_body["description"])
+    request_body = request.get_json()
+    new_book = Book.from_dict(request_body)
 
-        db.session.add(new_book)
-        db.session.commit()
+    db.session.add(new_book)
+    db.session.commit()
 
-        return make_response(f"Book {new_book.title} successfully created",201)
+    return make_response(jsonify(f"Book {new_book.title} successfully created"), 201)
 
 #RETURN ONE BOOK
-@books_bp.route("<book_id>",methods=["GET"])
-def get_one_book(book_id):
+def read_one_book(book_id):
     book = validate_book(book_id)
-    return {
-        "id": book.id,
-        "title": book.title,
-        "description": book.description,
-    }
-
-
+    return book.to_dict()
 
 #RETURNS ALL THE BOOKS
 @books_bp.route("",methods=["GET"])
@@ -60,27 +33,21 @@ def read_all_books():
     else:
         books = Book.query.all()
     
-    books_list = []
+    books_response = []
     for book in books:
-        books_list.append(dict(
-            id = book.id,
-            title = book.title,
-            description = book.description
-        ))
+        books_response.append(books.to_dict())
+    return jsonify(books_response)
 
-    return jsonify(books_list)
-
-#RETURNS REQUESTED BOOK
+# #RETURNS REQUESTED BOOK
 @books_bp.route("/<book_id>",methods=["GET"])
 def read_one_book(book_id):
     book = validate_book(book_id)
-    
-    return book.make_dict(),200
+    return book.to_dict()
 
 #UPDATE ONE BOOK: has a request body
 @books_bp.route("/<book_id>",methods=["PUT"])
 def update_book(book_id):
-    book = validate_book(book_id)
+    book = validate_book(Book,book_id)
     
     request_body = request.get_json()
 
@@ -94,7 +61,7 @@ def update_book(book_id):
 #DELETE RECORD
 @books_bp.route("/<book_id>",methods=["DELETE"])
 def delete_book(book_id):
-    book = validate_book(book_id)
+    book = validate_book(Book,book_id)
 
     db.session.delete(book)
     db.session.commit()
